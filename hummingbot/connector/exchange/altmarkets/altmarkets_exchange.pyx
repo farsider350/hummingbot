@@ -138,7 +138,7 @@ cdef class AltmarketsExchange(ExchangeBase):
         self._trading_rules = {}
         self._trading_rules_polling_task = None
         self._tx_tracker = AltmarketsExchangeTransactionTracker(self)
-        self._throttler = Throttler(rate_limit = (5.0, 1.0))
+        self._throttler = Throttler(rate_limit = (10.0, 1.0))
 
     @property
     def name(self) -> str:
@@ -261,14 +261,11 @@ cdef class AltmarketsExchange(ExchangeBase):
                            is_auth_required: bool = False,
                            try_count: int = 0,
                            request_weight: int = 1) -> Dict[str, Any]:
+        # Altmarkets rate limit is 100 https requests per 10 seconds
         async with self._throttler.weighted_task(request_weight=request_weight):
             content_type = "application/json" if method == "post" else "application/x-www-form-urlencoded"
             headers = {"Content-Type": content_type}
             url = Constants.EXCHANGE_ROOT_API + path_url
-            # Altmarkets rate limit is 100 https requests per 10 seconds
-            random.seed()
-            randSleep = (random.randint(1, 5) + random.randint(1, 5)) / 100
-            await asyncio.sleep(0.001 + randSleep)
             client = await self._http_client()
             if is_auth_required:
                 headers = self._altmarkets_auth.get_headers()
@@ -296,6 +293,8 @@ cdef class AltmarketsExchange(ExchangeBase):
             async with response_coro as response:
                 if response.status not in [200, 201]:
                     if try_count < 3:
+                        random.seed()
+                        randSleep = (random.randint(1, 5) + random.randint(1, 5)) / 1000
                         time_sleep = int(5 + (randSleep * (2 + try_count)))
                         self.logger().info(f"Error fetching data from {url}. HTTP status is {response.status}. Retrying in {time_sleep}s.")
                         await asyncio.sleep(time_sleep)
