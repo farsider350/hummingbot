@@ -263,12 +263,11 @@ cdef class AltmarketsExchange(ExchangeBase):
                            request_weight: int = 1) -> Dict[str, Any]:
         # Altmarkets rate limit is 100 https requests per 10 seconds
         async with self._throttler.weighted_task(request_weight=request_weight):
-            content_type = "application/json" if method == "post" else "application/x-www-form-urlencoded"
-            headers = {"Content-Type": content_type}
-            url = Constants.EXCHANGE_ROOT_API + path_url
+            url = f"{Constants.EXCHANGE_ROOT_API}{path_url}"
             client = await self._http_client()
-            if is_auth_required:
-                headers = self._altmarkets_auth.get_headers()
+            headers = self._altmarkets_auth.get_headers() if is_auth_required else {}
+            if "Content-Type" not in list(headers.keys()):
+                headers["Content-Type"] = ("application/json" if method == "post" else "application/x-www-form-urlencoded")
 
             # aiohttp TestClient requires path instead of url
             if isinstance(client, TestClient):
