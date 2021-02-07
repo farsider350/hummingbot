@@ -33,6 +33,7 @@ cdef class PureMarketMakingStrategy(StrategyBase):
         object _asset_price_delegate
         object _inventory_cost_price_delegate
         object _market_indicator_delegate
+        object _market_indicator_orders_pct
         object _price_type
         bint _take_if_crossed
         bint _track_tradehistory_enabled

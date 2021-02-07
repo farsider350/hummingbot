@@ -425,4 +425,12 @@ pure_market_making_config_map = {
                   type_str="float",
                   validator=lambda v: validate_decimal(v, min_value=0, inclusive=False),
                   default=60),
+    "market_indicator_reduce_orders_to_pct":
+        ConfigVar(key="market_indicator_reduce_orders_to_pct",
+                  prompt="What size in percentage would you like to reduce orders to based on the trend?"
+                         "(Enter 0 to stop orders or 1 to indicate 1%) >>> ",
+                  required_if=lambda: pure_market_making_config_map.get("market_indicator_enabled").value is True,
+                  type_str="decimal",
+                  validator=lambda v: validate_decimal(v, 0, 100, inclusive=True),
+                  default=Decimal("0")),
 }
