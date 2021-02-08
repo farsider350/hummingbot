@@ -1068,7 +1068,9 @@ cdef class PureMarketMakingStrategy(StrategyBase):
 
         for buy in proposal.buys:
             if buy.price > buy_pr_thresh and buy_pr_thresh != s_decimal_zero:
-                quote_amount = Decimal(buy.size * buy.price)
+                buy_fee = market.c_get_fee(self.base_asset, self.quote_asset, OrderType.LIMIT, TradeType.BUY,
+                                           buy.size, buy.price)
+                quote_amount = Decimal((buy.size * buy.price) * (Decimal('1') - buy_fee.percent))
                 buy.price = Decimal((buy_pr_thresh - (self.get_price() - buy.price)) * buy_profit)
                 adjusted_amount = quote_amount / (buy.price)
                 adjusted_amount = market.c_quantize_order_amount(self.trading_pair, adjusted_amount)
