@@ -89,7 +89,7 @@ cdef class PureMarketMakingStrategy(StrategyBase):
                  asset_price_delegate: AssetPriceDelegate = None,
                  inventory_cost_price_delegate: InventoryCostPriceDelegate = None,
                  market_indicator_delegate: MarketIndicatorDelegate = None,
-                 market_indicator_orders_pct: Decimal = s_decimal_zero,
+                 market_indicator_reduce_orders_to_pct: Decimal = s_decimal_zero,
                  price_type: str = "mid_price",
                  take_if_crossed: bool = False,
                  track_tradehistory_enabled: bool = False,
@@ -141,7 +141,7 @@ cdef class PureMarketMakingStrategy(StrategyBase):
         self._asset_price_delegate = asset_price_delegate
         self._inventory_cost_price_delegate = inventory_cost_price_delegate
         self._market_indicator_delegate = market_indicator_delegate
-        self._market_indicator_orders_pct = market_indicator_orders_pct
+        self._market_indicator_reduce_orders_to_pct = market_indicator_reduce_orders_to_pct
         self._price_type = self.get_price_type(price_type)
         self._take_if_crossed = take_if_crossed
         self._track_tradehistory_enabled = track_tradehistory_enabled
@@ -542,12 +542,12 @@ cdef class PureMarketMakingStrategy(StrategyBase):
         self._market_indicator_delegate = value
 
     @property
-    def market_indicator_orders_pct(self) -> Decimal:
-        return self._market_indicator_orders_pct
+    def market_indicator_reduce_orders_to_pct(self) -> Decimal:
+        return self._market_indicator_reduce_orders_to_pct
 
-    @market_indicator_orders_pct.setter
-    def market_indicator_orders_pct(self, value: Decimal):
-        self._market_indicator_orders_pct = value
+    @market_indicator_reduce_orders_to_pct.setter
+    def market_indicator_reduce_orders_to_pct(self, value: Decimal):
+        self._market_indicator_reduce_orders_to_pct = value
 
     @property
     def order_tracker(self):
@@ -1093,7 +1093,7 @@ cdef class PureMarketMakingStrategy(StrategyBase):
     cdef c_apply_indicator_constraint(self, object proposal):
         cdef:
             MarketIndicatorDelegate indicator = self._market_indicator_delegate
-            object indicator_orders_pct = self._market_indicator_orders_pct
+            object indicator_orders_pct = self._market_indicator_reduce_orders_to_pct
             bint market_trend_up
             bint market_trend_down
 

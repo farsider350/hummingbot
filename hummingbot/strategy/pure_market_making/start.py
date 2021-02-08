@@ -85,7 +85,7 @@ def start(self):
 
         market_indicator_enabled = c_map.get("market_indicator_enabled").value
         market_indicator_delegate = None
-        market_indicator_orders_pct = c_map.get("market_indicator_reduce_orders_to_pct").value / Decimal('100')
+        market_indicator_reduce_orders_to_pct = c_map.get("market_indicator_reduce_orders_to_pct").value / Decimal('100')
         if market_indicator_enabled is True:
             indicator_url = c_map.get("market_indicator_url").value
             indicator_key = c_map.get("market_indicator_apikey").value
@@ -117,7 +117,7 @@ def start(self):
             asset_price_delegate=asset_price_delegate,
             inventory_cost_price_delegate=inventory_cost_price_delegate,
             market_indicator_delegate=market_indicator_delegate,
-            market_indicator_orders_pct=market_indicator_orders_pct,
+            market_indicator_reduce_orders_to_pct=market_indicator_reduce_orders_to_pct,
             price_type=price_type,
             take_if_crossed=take_if_crossed,
             track_tradehistory_enabled=track_tradehistory_enabled,
