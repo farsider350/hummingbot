@@ -1098,10 +1098,12 @@ cdef class PureMarketMakingStrategy(StrategyBase):
 
         if lowest_sell_price != s_decimal_zero:
             buy_pr_thresh = Decimal(lowest_sell_price * buy_margin)
+            self.track_tradehistory_initial_max_buy = s_decimal_zero
         elif self.track_tradehistory_initial_max_buy > s_decimal_zero:
             buy_pr_thresh = self.track_tradehistory_initial_max_buy
         if highest_buy_price != s_decimal_zero:
             sell_pr_thresh = Decimal(highest_buy_price * sell_margin)
+            self.track_tradehistory_initial_min_sell = s_decimal_zero
         elif self.track_tradehistory_initial_min_sell > s_decimal_zero:
             sell_pr_thresh = self.track_tradehistory_initial_min_sell
 
