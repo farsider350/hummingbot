@@ -140,6 +140,7 @@ cdef class PureMarketMakingStrategy(StrategyBase):
         self._inventory_target_base_pct = inventory_target_base_pct
         self._inventory_target_base_pct_restore = inventory_target_base_pct
         self._inventory_range_multiplier = inventory_range_multiplier
+        self._inventory_range_multiplier_restore = inventory_range_multiplier
         self._hanging_orders_enabled = hanging_orders_enabled
         self._hanging_orders_cancel_pct = hanging_orders_cancel_pct
         self._order_optimization_enabled = order_optimization_enabled
@@ -1144,6 +1145,7 @@ cdef class PureMarketMakingStrategy(StrategyBase):
             self.trade_gain_pricethresh_buy = s_decimal_zero
         self.trade_gain_pricethresh_sell = s_decimal_zero
 
+        # PnL Targets
         if self._pnl_timestamp <= self._current_timestamp and self.trade_gain_profit_selloff > s_decimal_zero:
             self._pnl_timestamp = next_pnl_cycle
             ks_profitability = self.main_profitability()
@@ -1151,20 +1153,31 @@ cdef class PureMarketMakingStrategy(StrategyBase):
                 rel_profitability = profitability = Decimal(str(ks_profitability))
                 if self._trade_gain_profitability != s_decimal_zero:
                     rel_profitability = profitability - self._trade_gain_profitability
+                # Check and switch dump-it mode
                 if not self._trade_gain_dump_it and rel_profitability >= self.trade_gain_profit_selloff:
                     self.logger().info(f"Hit profit target @ {rel_profitability:.4f}, beginning sell-off.")
                     self._trade_gain_dump_it = True
                     self._trade_gain_profitability = profitability
-                    self._inventory_target_base_pct = Decimal("0.01")
+                    if self._inventory_target_base_pct != Decimal("0.000001"):
+                        self._inventory_target_base_pct_restore = self._inventory_target_base_pct
+                    self._inventory_target_base_pct = Decimal("0.000001")
+                    if self._inventory_range_multiplier != Decimal("0.000001"):
+                        self._inventory_range_multiplier_restore = self._inventory_range_multiplier
+                    self._inventory_range_multiplier = Decimal("0.000001")
                     if self.trade_gain_profit_buyin > s_decimal_zero:
                         self.trade_gain_pricethresh_buy = current_price * (Decimal('1') - self.trade_gain_profit_buyin)
+                # Check and switch buy-back-in mode
                 elif self._trade_gain_dump_it and (self.trade_gain_profit_buyin > s_decimal_zero and
                                                    current_price < self.trade_gain_pricethresh_buy):
                     self.logger().info(f"Hit buy-back target @ {current_price:.8f}, allowing trades.")
                     self._trade_gain_dump_it = False
-                    self._inventory_target_base_pct = self._inventory_target_base_pct_restore
+                    if self._inventory_target_base_pct == Decimal("0.000001"):
+                        self._inventory_target_base_pct = self._inventory_target_base_pct_restore
+                    if self._inventory_range_multiplier == Decimal("0.000001"):
+                        self._inventory_range_multiplier = self._inventory_range_multiplier_restore
                     self._pnl_timestamp = buyback_pnl_cycle
 
+        # Order by TS
         all_trades = trades + trades_history if len(trades) < 1000 else trades
         for trade in all_trades:
             trade_ts = int(trade.timestamp) if type(trade) == Trade else int(trade.timestamp / 1000)
@@ -1175,6 +1188,7 @@ cdef class PureMarketMakingStrategy(StrategyBase):
                 if trade_side == TradeType.BUY.name:
                     filtered_trades[trade_ts] = trade
 
+        # Filter and find trade vals
         for trade_ts in sorted(list(filtered_trades.keys()), reverse=True):
             trade = filtered_trades[trade_ts]
             trade_side = trade.side.name if type(trade) == Trade else trade.trade_type
@@ -1230,8 +1244,17 @@ cdef class PureMarketMakingStrategy(StrategyBase):
             if chk_ownside_sell:
                 self.trade_gain_pricethresh_sell = Decimal(highest_sell_price * sell_margin_on_self)
 
+        # Order Cancel Checks
+        should_cancel = (self._trade_gain_dump_it or (careful_trades and
+                                                      recent_sells_cf < 1 and
+                                                      recent_buys_cf >= careful_trades_limit))
+
         for buy in proposal.buys:
-            if buy.price > self.trade_gain_pricethresh_buy and self.trade_gain_pricethresh_buy != s_decimal_zero:
+            # Order Raise Checks
+            should_raise = (not self._trade_gain_dump_it and
+                            buy.price > self.trade_gain_pricethresh_buy and
+                            self.trade_gain_pricethresh_buy != s_decimal_zero)
+            if should_raise:
                 buy_fee = market.c_get_fee(self.base_asset, self.quote_asset, OrderType.LIMIT, TradeType.BUY,
                                            buy.size, buy.price)
                 quote_amount = Decimal((buy.size * buy.price) * (Decimal('1') - buy_fee.percent))
@@ -1239,9 +1262,7 @@ cdef class PureMarketMakingStrategy(StrategyBase):
                 adjusted_amount = quote_amount / (buy.price)
                 adjusted_amount = market.c_quantize_order_amount(self.trading_pair, adjusted_amount)
                 buy.size = adjusted_amount
-            elif self._trade_gain_dump_it or (careful_trades and
-                                              recent_sells_cf < 1 and
-                                              recent_buys_cf >= careful_trades_limit):
+            elif should_cancel:
                 buy.size = s_decimal_zero
 
         proposal.buys = [o for o in proposal.buys if o.size > 0]
