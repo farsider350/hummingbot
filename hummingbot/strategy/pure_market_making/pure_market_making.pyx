@@ -1171,6 +1171,7 @@ cdef class PureMarketMakingStrategy(StrategyBase):
                                                    current_price < self.trade_gain_pricethresh_buy):
                     self.logger().info(f"Hit buy-back target @ {current_price:.8f}, allowing trades.")
                     self._trade_gain_dump_it = False
+                    self._trade_gain_profitability = profitability
                     if self._inventory_target_base_pct == Decimal("0.000001"):
                         self._inventory_target_base_pct = self._inventory_target_base_pct_restore
                     if self._inventory_range_multiplier == Decimal("0.000001"):
