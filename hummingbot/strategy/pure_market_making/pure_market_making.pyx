@@ -1259,10 +1259,10 @@ cdef class PureMarketMakingStrategy(StrategyBase):
                 buy_fee = market.c_get_fee(self.base_asset, self.quote_asset, OrderType.LIMIT, TradeType.BUY,
                                            buy.size, buy.price)
                 quote_amount = Decimal((buy.size * buy.price) * (Decimal('1') - buy_fee.percent))
-                buy.price = Decimal((self.trade_gain_pricethresh_buy - (current_price - buy.price)) * buy_profit)
+                adjusted_price = Decimal((self.trade_gain_pricethresh_buy - (current_price - buy.price)) * buy_profit)
+                buy.price = market.c_quantize_order_price(self.trading_pair, adjusted_price)
                 adjusted_amount = quote_amount / (buy.price)
-                adjusted_amount = market.c_quantize_order_amount(self.trading_pair, adjusted_amount)
-                buy.size = adjusted_amount
+                buy.size = market.c_quantize_order_amount(self.trading_pair, adjusted_amount)
             elif should_cancel:
                 buy.size = s_decimal_zero
 
@@ -1270,7 +1270,9 @@ cdef class PureMarketMakingStrategy(StrategyBase):
 
         for sell in proposal.sells:
             if sell.price < self.trade_gain_pricethresh_sell and self.trade_gain_pricethresh_sell != s_decimal_zero:
-                sell.price = Decimal((self.trade_gain_pricethresh_sell + (sell.price - current_price)) * sell_profit)
+                adjusted_price = Decimal((self.trade_gain_pricethresh_sell + (sell.price - current_price)) * sell_profit)
+                sell.price = market.c_quantize_order_price(self.trading_pair, adjusted_price)
+                sell.size = market.c_quantize_order_amount(self.trading_pair, sell.size)
             elif careful_trades and recent_buys_cf < 1 and recent_sells_cf >= careful_trades_limit:
                 sell.size = s_decimal_zero
 
