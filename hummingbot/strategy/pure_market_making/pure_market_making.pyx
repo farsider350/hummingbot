@@ -901,14 +901,14 @@ cdef class PureMarketMakingStrategy(StrategyBase):
                 self.c_apply_order_price_modifiers(proposal)
                 # 4. Apply functions that modify orders size
                 self.c_apply_order_size_modifiers(proposal)
-                # 5. Apply budget constraint, i.e. can't buy/sell more than what you have.
-                self.c_apply_budget_constraint(proposal)
-                # 6. Check profitable
+                # 4.A. Apply Trade Gain Rules
                 if self._trade_gain_enabled:
                     self.c_apply_profit_constraint(proposal)
-                # 7. Check profitable
+                # 4.B. Apply Market Indicator Rules
                 if self._market_indicator_delegate is not None and not self._trade_gain_dump_it:
                     self.c_apply_indicator_constraint(proposal)
+                # 5. Apply budget constraint, i.e. can't buy/sell more than what you have.
+                self.c_apply_budget_constraint(proposal)
 
                 if not self._take_if_crossed:
                     self.c_filter_out_takers(proposal)
