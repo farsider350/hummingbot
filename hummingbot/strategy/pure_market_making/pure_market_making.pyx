@@ -967,14 +967,14 @@ cdef class PureMarketMakingStrategy(StrategyBase):
                 price = buy_reference_price * (Decimal("1") - self._bid_spread - (level * self._order_level_spread))
                 price = market.c_quantize_order_price(self.trading_pair, price)
                 size = self._order_amount + (self._order_level_amount * level)
-                size = market.c_quantize_order_amount(self.trading_pair, size)
+                size = market.c_quantize_order_amount(self.trading_pair, size, price)
                 if size > 0:
                     buys.append(PriceSize(price, size))
             for level in range(0, self._sell_levels):
                 price = sell_reference_price * (Decimal("1") + self._ask_spread + (level * self._order_level_spread))
                 price = market.c_quantize_order_price(self.trading_pair, price)
                 size = self._order_amount + (self._order_level_amount * level)
-                size = market.c_quantize_order_amount(self.trading_pair, size)
+                size = market.c_quantize_order_amount(self.trading_pair, size, price)
                 if size > 0:
                     sells.append(PriceSize(price, size))
 
@@ -1082,7 +1082,7 @@ cdef class PureMarketMakingStrategy(StrategyBase):
             # Adjust buy order size to use remaining balance if less than the order amount
             if quote_balance < quote_size:
                 adjusted_amount = quote_balance / (buy.price * (Decimal("1") + buy_fee.percent))
-                adjusted_amount = market.c_quantize_order_amount(self.trading_pair, adjusted_amount)
+                adjusted_amount = market.c_quantize_order_amount(self.trading_pair, adjusted_amount, buy.price)
                 # self.logger().info(f"Not enough balance for buy order (Size: {buy.size.normalize()}, Price: {buy.price.normalize()}), "
                 #                    f"order_amount is adjusted to {adjusted_amount}")
                 buy.size = adjusted_amount
@@ -1099,7 +1099,7 @@ cdef class PureMarketMakingStrategy(StrategyBase):
 
             # Adjust sell order size to use remaining balance if less than the order amount
             if base_balance < base_size:
-                adjusted_amount = market.c_quantize_order_amount(self.trading_pair, base_balance)
+                adjusted_amount = market.c_quantize_order_amount(self.trading_pair, base_balance, sell.price)
                 # self.logger().info(f"Not enough balance for sell order (Size: {sell.size.normalize()}, Price: {sell.price.normalize()}), "
                 #                    f"order_amount is adjusted to {adjusted_amount}")
                 sell.size = adjusted_amount
@@ -1262,7 +1262,7 @@ cdef class PureMarketMakingStrategy(StrategyBase):
                 adjusted_price = Decimal((self.trade_gain_pricethresh_buy - (current_price - buy.price)) * buy_profit)
                 buy.price = market.c_quantize_order_price(self.trading_pair, adjusted_price)
                 adjusted_amount = quote_amount / (buy.price)
-                buy.size = market.c_quantize_order_amount(self.trading_pair, adjusted_amount)
+                buy.size = market.c_quantize_order_amount(self.trading_pair, adjusted_amount, buy.price)
             elif should_cancel:
                 buy.size = s_decimal_zero
 
@@ -1272,7 +1272,7 @@ cdef class PureMarketMakingStrategy(StrategyBase):
             if sell.price < self.trade_gain_pricethresh_sell and self.trade_gain_pricethresh_sell != s_decimal_zero:
                 adjusted_price = Decimal((self.trade_gain_pricethresh_sell + (sell.price - current_price)) * sell_profit)
                 sell.price = market.c_quantize_order_price(self.trading_pair, adjusted_price)
-                sell.size = market.c_quantize_order_amount(self.trading_pair, sell.size)
+                sell.size = market.c_quantize_order_amount(self.trading_pair, sell.size, sell.price)
             elif careful_trades and recent_buys_cf < 1 and recent_sells_cf >= careful_trades_limit:
                 sell.size = s_decimal_zero
 
@@ -1293,14 +1293,14 @@ cdef class PureMarketMakingStrategy(StrategyBase):
 
         for buy in proposal.buys:
             if market_trend_up in [None, False]:
-                buy.size = buy.size * indicator_orders_pct
+                buy.size = min(buy.size, buy.size * indicator_orders_pct)
 
         proposal.buys = [o for o in proposal.buys if o.size > 0]
 
         if not allow_profitable or self.trade_gain_pricethresh_sell == s_decimal_zero:
             for sell in proposal.sells:
                 if market_trend_down in [None, False]:
-                    sell.size = sell.size * indicator_orders_pct
+                    sell.size = min(sell.size, sell.size * indicator_orders_pct)
 
         proposal.sells = [o for o in proposal.sells if o.size > 0]
     # TREND TRACKER
