@@ -4,9 +4,16 @@ from typing import (
 )
 from decimal import Decimal
 from hummingbot.client.config.global_config_map import global_config_map
+from hummingbot.connector.exchange_base import ExchangeBase
+from hummingbot.connector.exchange.paper_trade import create_paper_trade_market
 from hummingbot.strategy.market_trading_pair_tuple import MarketTradingPairTuple
 from hummingbot.strategy.cross_exchange_market_making.cross_exchange_market_pair import CrossExchangeMarketPair
-from hummingbot.strategy.cross_exchange_market_making.cross_exchange_market_making import CrossExchangeMarketMakingStrategy
+from hummingbot.strategy.cross_exchange_market_making.cross_exchange_market_making import (
+    CrossExchangeMarketMakingStrategy,
+    AssetPriceDelegate,
+    OrderBookAssetPriceDelegate,
+    APIAssetPriceDelegate,
+)
 from hummingbot.strategy.cross_exchange_market_making.cross_exchange_market_making_config_map import \
     cross_exchange_market_making_config_map as xemm_map
 
@@ -30,6 +37,26 @@ def start(self):
     anti_hysteresis_duration = xemm_map.get("anti_hysteresis_duration").value
     taker_to_maker_base_conversion_rate = xemm_map.get("taker_to_maker_base_conversion_rate").value
     taker_to_maker_quote_conversion_rate = xemm_map.get("taker_to_maker_quote_conversion_rate").value
+    price_source_types = {
+        'base': xemm_map.get("base_price_source_type").value,
+        'quote': xemm_map.get("quote_price_source_type").value,
+    }
+    price_sources = {
+        'base': xemm_map.get("base_price_source").value,
+        'quote': xemm_map.get("quote_price_source").value,
+    }
+    price_source_markets = {
+        'base': xemm_map.get("base_price_source_market").value,
+        'quote': xemm_map.get("quote_price_source_market").value,
+    }
+    price_source_exchanges = {
+        'base': xemm_map.get("base_price_source_exchange").value,
+        'quote': xemm_map.get("quote_price_source_exchange").value,
+    }
+    price_source_custom_apis = {
+        'base': xemm_map.get("base_price_source_custom_api").value,
+        'quote': xemm_map.get("quote_price_source_custom_api").value,
+    }
 
     # check if top depth tolerance is a list or if trade size override exists
     if isinstance(top_depth_tolerance, list) or "trade_size_override" in xemm_map:
@@ -50,6 +77,14 @@ def start(self):
         (taker_market, [taker_trading_pair]),
     ]
 
+    # Add Asset Price Delegate markets to main markets if already using the exchange.
+    for asset_type in ['base', 'quote']:
+        if price_sources[asset_type] == "external_market":
+            ext_exchange: str = price_source_exchanges[asset_type]
+            if ext_exchange in [maker_market, taker_market]:
+                asset_pair: str = price_source_markets[asset_type]
+                market_names.append((ext_exchange, [asset_pair]))
+
     self._initialize_wallet(token_trading_pairs=list(set(maker_assets + taker_assets)))
     self._initialize_markets(market_names)
     self.assets = set(maker_assets + taker_assets)
@@ -59,6 +94,37 @@ def start(self):
     taker_market_trading_pair_tuple = MarketTradingPairTuple(*taker_data)
     self.market_trading_pair_tuples = [maker_market_trading_pair_tuple, taker_market_trading_pair_tuple]
     self.market_pair = CrossExchangeMarketPair(maker=maker_market_trading_pair_tuple, taker=taker_market_trading_pair_tuple)
+
+    # Asset Price Feed Delegates
+    price_delegates = {'base': None, 'quote': None}
+    shared_ext_mkt = None
+    # Initialize price delegates as needed for defined price sources.
+    for asset_type in ['base', 'quote']:
+        price_source: str = price_sources[asset_type]
+        if price_source == "external_market":
+            # For price feeds using other connectors
+            ext_exchange: str = price_source_exchanges[asset_type]
+            asset_pair: str = price_source_markets[asset_type]
+            if ext_exchange in list(self.markets.keys()):
+                # Use existing market if Exchange is already in markets
+                ext_market = self.markets[ext_exchange]
+            else:
+                # Create markets otherwise
+                UseSharedSource = (price_sources['quote'] == price_sources['base'] and
+                                   price_source_exchanges['quote'] == price_source_exchanges['base'])
+                # Use shared paper trade market if both price feeds are on the same exchange.
+                if UseSharedSource and shared_ext_mkt is None and asset_type == 'base':
+                    # Create Shared paper trade if not existing
+                    shared_ext_mkt = create_paper_trade_market(price_source_exchanges['base'],
+                                                               [price_source_markets['base'], price_source_markets['quote']])
+                ext_market = shared_ext_mkt if UseSharedSource else create_paper_trade_market(ext_exchange, [asset_pair])
+                if ext_exchange not in list(self.markets.keys()):
+                    self.markets[ext_exchange]: ExchangeBase = ext_market
+            price_delegates[asset_type]: AssetPriceDelegate = OrderBookAssetPriceDelegate(ext_market, asset_pair)
+        elif price_source == "custom_api":
+            # For price feeds using custom APIs
+            custom_api: str = price_source_custom_apis[asset_type]
+            price_delegates[asset_type]: AssetPriceDelegate = APIAssetPriceDelegate(custom_api)
 
     strategy_logging_options = (
         CrossExchangeMarketMakingStrategy.OPTION_LOG_CREATE_ORDER
@@ -85,5 +151,9 @@ def start(self):
         anti_hysteresis_duration=anti_hysteresis_duration,
         taker_to_maker_base_conversion_rate=taker_to_maker_base_conversion_rate,
         taker_to_maker_quote_conversion_rate=taker_to_maker_quote_conversion_rate,
+        base_asset_price_delegate=price_delegates['base'],
+        quote_asset_price_delegate=price_delegates['quote'],
+        base_price_source_type=price_source_types['base'],
+        quote_price_source_type=price_source_types['quote'],
         hb_app_notification=True,
     )
