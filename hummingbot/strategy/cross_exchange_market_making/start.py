@@ -8,7 +8,7 @@ from hummingbot.connector.exchange_base import ExchangeBase
 from hummingbot.connector.exchange.paper_trade import create_paper_trade_market
 from hummingbot.strategy.market_trading_pair_tuple import MarketTradingPairTuple
 from hummingbot.strategy.cross_exchange_market_making.cross_exchange_market_pair import CrossExchangeMarketPair
-from hummingbot.strategy.cross_exchange_market_making.cross_exchange_market_making import (
+from hummingbot.strategy.cross_exchange_market_making import (
     CrossExchangeMarketMakingStrategy,
     AssetPriceDelegate,
     OrderBookAssetPriceDelegate,

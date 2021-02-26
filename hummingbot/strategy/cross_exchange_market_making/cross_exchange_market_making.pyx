@@ -3,6 +3,7 @@ from collections import (
     deque
 )
 from decimal import Decimal
+import pandas as pd
 import logging
 from math import (
     floor,
@@ -29,6 +30,7 @@ from hummingbot.core.event.events import (
 from hummingbot.core.data_type.order_book import OrderBook
 from hummingbot.strategy.strategy_base cimport StrategyBase
 from hummingbot.strategy.strategy_base import StrategyBase
+from hummingbot.strategy.market_trading_pair_tuple import MarketTradingPairTuple
 from .cross_exchange_market_pair import CrossExchangeMarketPair
 from .order_id_market_pair_tracker import OrderIDMarketPairTracker
 from .asset_price_delegate cimport AssetPriceDelegate
