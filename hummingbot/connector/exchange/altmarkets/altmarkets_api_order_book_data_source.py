@@ -49,12 +49,13 @@ async def api_request(method,
     async with response_coro as response:
         if response.status not in [200, 201]:
             if try_count < 3:
+                try_count += 1
                 random.seed()
-                randSleep = (random.randint(1, 5) + random.randint(1, 5)) / 1000
-                time_sleep = int(5 + (randSleep * (2 + try_count)))
-                print(f"Error fetching data from {url}. HTTP status is {response.status}. Retrying in {time_sleep}s.")
+                randSleep = 1 + float(random.randint(1, 10) / 100)
+                time_sleep = float(5 + float(randSleep * (1 + (try_count ** try_count))))
+                print(f"Error fetching data from {url}. HTTP status is {response.status}. Retrying in {time_sleep:.1f}s.")
                 await asyncio.sleep(time_sleep)
-                data = await api_request(method=method, path_url=path_url, params=params, data=None, client=client, try_count=try_count + 1)
+                data = await api_request(method=method, path_url=path_url, params=params, data=None, client=client, try_count=try_count)
                 return data
             try:
                 parsed_response = await response.json()
