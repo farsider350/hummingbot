@@ -1257,7 +1257,7 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
                             f"({market_pair.maker.trading_pair}) Creating limit bid order for "
                             f"{bid_size} {market_pair.maker.base_asset} at "
                             f"{bid_price} {market_pair.maker.quote_asset}. "
-                            f"Current hedging price: {effective_hedging_price} {market_pair.taker.quote_asset} "
+                            f"Current hedging price: {effective_hedging_price:.8f} {market_pair.taker.quote_asset} "
                             f"(Rate adjusted: {effective_hedging_price_adjusted:.8f} {market_pair.taker.quote_asset})."
                         )
                     order_id = self.c_place_order(market_pair, True, True, bid_size, bid_price)
@@ -1289,15 +1289,18 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
                         False,
                         ask_size
                     )
-                    effective_hedging_price_adjusted = effective_hedging_price
+                    if self._quote_price_source_inversed is True:
+                        effective_hedging_price_adjusted = effective_hedging_price / self.market_conversion_rate()
+                    else:
+                        effective_hedging_price_adjusted = effective_hedging_price * self.market_conversion_rate()
                     if self._logging_options & self.OPTION_LOG_CREATE_ORDER:
                         self.log_with_clock(
                             logging.INFO,
                             f"({market_pair.maker.trading_pair}) Creating limit ask order for "
                             f"{ask_size} {market_pair.maker.base_asset} at "
                             f"{ask_price} {market_pair.maker.quote_asset}. "
-                            f"Current hedging price: {effective_hedging_price} {market_pair.maker.quote_asset} "
-                            f"(Rate adjusted: {effective_hedging_price_adjusted:.8f} {market_pair.maker.quote_asset})."
+                            f"Current hedging price: {effective_hedging_price:.8f} {market_pair.taker.quote_asset} "
+                            f"(Rate adjusted: {effective_hedging_price_adjusted:.8f} {market_pair.taker.quote_asset})."
                         )
                     order_id = self.c_place_order(market_pair, False, True, ask_size, ask_price)
                 else:
