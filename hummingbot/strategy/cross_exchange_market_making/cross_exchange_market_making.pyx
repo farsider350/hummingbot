@@ -1258,7 +1258,7 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
                             f"{bid_size} {market_pair.maker.base_asset} at "
                             f"{bid_price} {market_pair.maker.quote_asset}. "
                             f"Current hedging price: {effective_hedging_price} {market_pair.taker.quote_asset} "
-                            f"(Rate adjusted: {effective_hedging_price_adjusted:.2f} {market_pair.taker.quote_asset})."
+                            f"(Rate adjusted: {effective_hedging_price_adjusted:.8f} {market_pair.taker.quote_asset})."
                         )
                     order_id = self.c_place_order(market_pair, True, True, bid_size, bid_price)
                 else:
@@ -1297,7 +1297,7 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
                             f"{ask_size} {market_pair.maker.base_asset} at "
                             f"{ask_price} {market_pair.maker.quote_asset}. "
                             f"Current hedging price: {effective_hedging_price} {market_pair.maker.quote_asset} "
-                            f"(Rate adjusted: {effective_hedging_price_adjusted:.2f} {market_pair.maker.quote_asset})."
+                            f"(Rate adjusted: {effective_hedging_price_adjusted:.8f} {market_pair.maker.quote_asset})."
                         )
                     order_id = self.c_place_order(market_pair, False, True, ask_size, ask_price)
                 else:

@@ -278,7 +278,7 @@ cross_exchange_market_making_config_map = {
         prompt_on_new=True,
         required_if=lambda: cross_exchange_market_making_config_map.get("base_price_source").value == "config_rate",
         default=Decimal("1"),
-        validator=lambda v: validate_decimal(v, Decimal(0), Decimal("100"), inclusive=False),
+        validator=lambda v: validate_decimal(v, Decimal(0), inclusive=False),
         type_str="decimal"
     ),
     "taker_to_maker_quote_conversion_rate": ConfigVar(
@@ -289,7 +289,7 @@ cross_exchange_market_making_config_map = {
         prompt_on_new=True,
         required_if=lambda: cross_exchange_market_making_config_map.get("quote_price_source").value == "config_rate",
         default=Decimal("1"),
-        validator=lambda v: validate_decimal(v, Decimal(0), Decimal("100"), inclusive=False),
+        validator=lambda v: validate_decimal(v, Decimal(0), inclusive=False),
         type_str="decimal"
     ),
     "base_price_source_exchange":
