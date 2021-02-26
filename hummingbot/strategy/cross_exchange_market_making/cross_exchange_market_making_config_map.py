@@ -88,6 +88,7 @@ def on_validate_base_price_source(value: str):
         cross_exchange_market_making_config_map["base_price_source_custom_api"].value = None
     else:
         cross_exchange_market_making_config_map["base_price_source_type"].value = None
+        cross_exchange_market_making_config_map["base_price_source_inversed"].value = False
 
 
 def base_price_source_market_prompt() -> str:
@@ -113,6 +114,7 @@ def on_validate_quote_price_source(value: str):
         cross_exchange_market_making_config_map["quote_price_source_custom_api"].value = None
     else:
         cross_exchange_market_making_config_map["quote_price_source_type"].value = None
+        cross_exchange_market_making_config_map["quote_price_source_inversed"].value = False
 
 
 def quote_price_source_market_prompt() -> str:
@@ -322,6 +324,14 @@ cross_exchange_market_making_config_map = {
                                                     "best_bid",
                                                     "best_ask"} else
                   "Invalid price type."),
+    "base_price_source_inversed": ConfigVar(
+        key="base_price_source_inversed",
+        prompt="Inverse the base price? (Yes/No) >>> ",
+        type_str="bool",
+        default=False,
+        required_if=lambda: False,
+        validator=validate_bool,
+    ),
     "quote_price_source_exchange":
         ConfigVar(key="quote_price_source_exchange",
                   prompt="Enter quote external price source exchange name >>> ",
@@ -354,4 +364,12 @@ cross_exchange_market_making_config_map = {
                                                     "best_bid",
                                                     "best_ask"} else
                   "Invalid price type."),
+    "quote_price_source_inversed": ConfigVar(
+        key="quote_price_source_inversed",
+        prompt="Inverse the quote price? (Yes/No) >>> ",
+        type_str="bool",
+        default=False,
+        required_if=lambda: False,
+        validator=validate_bool,
+    ),
 }

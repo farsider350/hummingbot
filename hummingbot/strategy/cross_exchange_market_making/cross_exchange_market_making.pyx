@@ -87,6 +87,8 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
                  quote_asset_price_delegate: AssetPriceDelegate = None,
                  base_price_source_type: str = "mid_price",
                  quote_price_source_type: str = "mid_price",
+                 base_price_source_inversed: bool = False,
+                 quote_price_source_inversed: bool = False,
                  hb_app_notification: bool = False
                  ):
         """
@@ -150,6 +152,8 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
         self._quote_asset_price_delegate = quote_asset_price_delegate
         self._base_price_source_type = self.get_price_type(base_price_source_type)
         self._quote_price_source_type = self.get_price_type(quote_price_source_type)
+        self._base_price_source_inversed = base_price_source_inversed
+        self._quote_price_source_inversed = quote_price_source_inversed
         self._hb_app_notification = hb_app_notification
 
         self._maker_order_ids = []
@@ -207,6 +211,8 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
         price = price_provider.get_price_by_type(self._base_price_source_type)
         if price.is_nan():
             price = price_provider.get_price_by_type(PriceType.MidPrice)
+        if self._base_price_source_inversed is True and not price.is_nan():
+            return Decimal("1") / price
         return price
 
     def get_base_mid_price(self) -> float:
@@ -230,6 +236,8 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
         price = price_provider.get_price_by_type(self._quote_price_source_type)
         if price.is_nan():
             price = price_provider.get_price_by_type(PriceType.MidPrice)
+        if self._quote_price_source_inversed is True and not price.is_nan():
+            return Decimal("1") / price
         return price
 
     def get_quote_mid_price(self) -> float:
@@ -1239,7 +1247,10 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
                         True,
                         bid_size
                     )
-                    effective_hedging_price_adjusted = effective_hedging_price * self.market_conversion_rate()
+                    if self._quote_price_source_inversed is True:
+                        effective_hedging_price_adjusted = effective_hedging_price / self.market_conversion_rate()
+                    else:
+                        effective_hedging_price_adjusted = effective_hedging_price * self.market_conversion_rate()
                     if self._logging_options & self.OPTION_LOG_CREATE_ORDER:
                         self.log_with_clock(
                             logging.INFO,

@@ -37,6 +37,8 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
         object _quote_asset_price_delegate
         object _base_price_source_type
         object _quote_price_source_type
+        bint _base_price_source_inversed
+        bint _quote_price_source_inversed
         bint _hb_app_notification
         list _maker_order_ids
 

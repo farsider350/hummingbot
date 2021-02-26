@@ -87,6 +87,7 @@ base_price_source_custom_api: null
 
 # Base Price Source Type
 base_price_source_type: null
+base_price_source_inversed: null
 
 # Quote Price Source Exchange
 quote_price_source_exchange: null
@@ -99,6 +100,7 @@ quote_price_source_custom_api: null
 
 # Quote Price Source Type
 quote_price_source_type: null
+quote_price_source_inversed: null
 
 
 # For more detailed information, see:

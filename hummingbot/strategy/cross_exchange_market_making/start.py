@@ -57,6 +57,10 @@ def start(self):
         'base': xemm_map.get("base_price_source_custom_api").value,
         'quote': xemm_map.get("quote_price_source_custom_api").value,
     }
+    price_source_inversed = {
+        'base': xemm_map.get("base_price_source_inversed").value,
+        'quote': xemm_map.get("quote_price_source_inversed").value,
+    }
 
     # check if top depth tolerance is a list or if trade size override exists
     if isinstance(top_depth_tolerance, list) or "trade_size_override" in xemm_map:
@@ -155,5 +159,7 @@ def start(self):
         quote_asset_price_delegate=price_delegates['quote'],
         base_price_source_type=price_source_types['base'],
         quote_price_source_type=price_source_types['quote'],
+        base_price_source_inversed=price_source_inversed['base'],
+        quote_price_source_inversed=price_source_inversed['quote'],
         hb_app_notification=True,
     )
