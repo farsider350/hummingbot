@@ -42,8 +42,6 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
         bint _hb_app_notification
         list _maker_order_ids
 
-    cdef object c_get_base_mid_price(self)
-    cdef object c_get_quote_mid_price(self)
     cdef c_process_market_pair(self,
                                object market_pair,
                                list active_ddex_orders)

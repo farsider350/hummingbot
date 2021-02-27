@@ -187,23 +187,7 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
     def logging_options(self, int64_t logging_options):
         self._logging_options = logging_options
 
-    @property
-    def base_asset_price_delegate(self) -> AssetPriceDelegate:
-        return self._base_asset_price_delegate
-
-    @base_asset_price_delegate.setter
-    def base_asset_price_delegate(self, value):
-        self._base_asset_price_delegate = value
-
-    @property
-    def quote_asset_price_delegate(self) -> AssetPriceDelegate:
-        return self._quote_asset_price_delegate
-
-    @quote_asset_price_delegate.setter
-    def quote_asset_price_delegate(self, value):
-        self._quote_asset_price_delegate = value
-
-    def get_base_price(self) -> float:
+    def t_to_m_base_price(self) -> float:
         if self._base_asset_price_delegate is not None:
             price_provider = self._base_asset_price_delegate
         else:
@@ -215,20 +199,7 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
             return Decimal("1") / price
         return price
 
-    def get_base_mid_price(self) -> float:
-        return self.c_get_base_mid_price()
-
-    cdef object c_get_base_mid_price(self):
-        cdef:
-            AssetPriceDelegate delegate = self._base_asset_price_delegate
-            object mid_price
-        if self._base_asset_price_delegate is not None:
-            mid_price = delegate.c_get_base_mid_price()
-        else:
-            mid_price = self._market_info.get_base_mid_price()
-        return mid_price
-
-    def get_quote_price(self) -> float:
+    def t_to_m_quote_price(self) -> float:
         if self._quote_asset_price_delegate is not None:
             price_provider = self._quote_asset_price_delegate
         else:
@@ -239,19 +210,6 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
         if self._quote_price_source_inversed is True and not price.is_nan():
             return Decimal("1") / price
         return price
-
-    def get_quote_mid_price(self) -> float:
-        return self.c_get_quote_mid_price()
-
-    cdef object c_get_quote_mid_price(self):
-        cdef:
-            AssetPriceDelegate delegate = self._quote_asset_price_delegate
-            object mid_price
-        if self._quote_asset_price_delegate is not None:
-            mid_price = delegate.c_get_quote_mid_price()
-        else:
-            mid_price = self._market_info.get_quote_mid_price()
-        return mid_price
 
     def market_status_data_frame(self, market_trading_pair_tuples: List[MarketTradingPairTuple]) -> pd.DataFrame:
         markets_data = []
@@ -1189,11 +1147,15 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
             object order_price = active_order.price
             ExchangeBase maker_market = market_pair.maker.market
             ExchangeBase taker_market = market_pair.taker.market
+            object base_conv = self.t_to_m_base_price()
+            object quote_conv = self.t_to_m_quote_price()
 
-            object quote_asset_amount = maker_market.c_get_balance(market_pair.maker.quote_asset) if is_buy else \
-                taker_market.c_get_balance(market_pair.taker.quote_asset)
-            object base_asset_amount = taker_market.c_get_balance(market_pair.taker.base_asset) if is_buy else \
-                maker_market.c_get_balance(market_pair.maker.base_asset)
+            object quote_asset_amount = (maker_market.c_get_balance(market_pair.maker.quote_asset)
+                                         if is_buy else
+                                         taker_market.c_get_balance(market_pair.taker.quote_asset) * quote_conv)
+            object base_asset_amount = (taker_market.c_get_balance(market_pair.taker.base_asset) * base_conv
+                                        if is_buy else
+                                        maker_market.c_get_balance(market_pair.maker.base_asset))
             object order_size_limit
 
         order_size_limit = min(base_asset_amount, quote_asset_amount / order_price)
@@ -1215,8 +1177,8 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
         """
         Return price conversion rate for a taker market (to convert it into maker base asset value)
         """
-        base_conversion_rate = self.get_base_price()
-        quote_conversion_rate = self.get_quote_price()
+        base_conversion_rate = self.t_to_m_base_price()
+        quote_conversion_rate = self.t_to_m_quote_price()
         return quote_conversion_rate / base_conversion_rate
 
     cdef c_check_and_create_new_orders(self, object market_pair, bint has_active_bid, bint has_active_ask):
@@ -1247,17 +1209,14 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
                         True,
                         bid_size
                     )
-                    if self._quote_price_source_inversed is True:
-                        effective_hedging_price_adjusted = effective_hedging_price / self.market_conversion_rate()
-                    else:
-                        effective_hedging_price_adjusted = effective_hedging_price * self.market_conversion_rate()
+                    effective_hedging_price_adjusted = effective_hedging_price / self.market_conversion_rate()
                     if self._logging_options & self.OPTION_LOG_CREATE_ORDER:
                         self.log_with_clock(
                             logging.INFO,
                             f"({market_pair.maker.trading_pair}) Creating limit bid order for "
                             f"{bid_size} {market_pair.maker.base_asset} at "
                             f"{bid_price} {market_pair.maker.quote_asset}. "
-                            f"Current hedging price: {effective_hedging_price:.8f} {market_pair.taker.quote_asset} "
+                            f"Current hedging price: {effective_hedging_price:.8f} {market_pair.maker.quote_asset} "
                             f"(Rate adjusted: {effective_hedging_price_adjusted:.8f} {market_pair.taker.quote_asset})."
                         )
                     order_id = self.c_place_order(market_pair, True, True, bid_size, bid_price)
@@ -1289,17 +1248,14 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
                         False,
                         ask_size
                     )
-                    if self._quote_price_source_inversed is True:
-                        effective_hedging_price_adjusted = effective_hedging_price / self.market_conversion_rate()
-                    else:
-                        effective_hedging_price_adjusted = effective_hedging_price * self.market_conversion_rate()
+                    effective_hedging_price_adjusted = effective_hedging_price / self.market_conversion_rate()
                     if self._logging_options & self.OPTION_LOG_CREATE_ORDER:
                         self.log_with_clock(
                             logging.INFO,
                             f"({market_pair.maker.trading_pair}) Creating limit ask order for "
                             f"{ask_size} {market_pair.maker.base_asset} at "
                             f"{ask_price} {market_pair.maker.quote_asset}. "
-                            f"Current hedging price: {effective_hedging_price:.8f} {market_pair.taker.quote_asset} "
+                            f"Current hedging price: {effective_hedging_price:.8f} {market_pair.maker.quote_asset} "
                             f"(Rate adjusted: {effective_hedging_price_adjusted:.8f} {market_pair.taker.quote_asset})."
                         )
                     order_id = self.c_place_order(market_pair, False, True, ask_size, ask_price)
