@@ -68,7 +68,7 @@ async def generic_api_request(method,
     response_coro = http_client.request(
         method=method.upper(), url=url, headers=headers, params=params, timeout=Constants.API_CALL_TIMEOUT
     )
-    parsed_response, request_errors = None, False
+    http_status, parsed_response, request_errors = None, None, False
     try:
         async with response_coro as response:
             try:
@@ -83,19 +83,20 @@ async def generic_api_request(method,
                     pass
             if response.status not in [200, 201] or parsed_response is None:
                 request_errors = True
+                http_status = response.status
     except Exception:
         request_errors = True
     if request_errors or parsed_response is None:
         if try_count < 4:
             try_count += 1
             time_sleep = retry_sleep_time(try_count)
-            print(f"Error fetching data from {url}. HTTP status is {response.status}. "
+            print(f"Error fetching data from {url}. HTTP status is {http_status}. "
                   f"Retrying in {time_sleep:.1f}s.")
             await asyncio.sleep(time_sleep)
             return await generic_api_request(method=method, path_url=path_url, params=params,
                                              client=client, try_count=try_count)
         else:
-            print(f"Error fetching data from {url}. HTTP status is {response.status}. "
+            print(f"Error fetching data from {url}. HTTP status is {http_status}. "
                   f"Final msg: {parsed_response}.")
             raise AltmarketsAPIError({"error": parsed_response})
     return parsed_response
