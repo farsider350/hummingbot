@@ -62,6 +62,7 @@ from hummingbot.connector.exchange.altmarkets.altmarkets_utils import (
     convert_to_exchange_trading_pair,
     convert_from_exchange_trading_pair,
     retry_sleep_time,
+    AltmarketsAPIError,
 )
 from hummingbot.connector.trading_rule cimport TradingRule
 from hummingbot.connector.exchange_base import ExchangeBase
@@ -71,12 +72,6 @@ from hummingbot.core.utils.estimate_fee import estimate_fee
 hm_logger = None
 s_decimal_0 = Decimal(0)
 s_decimal_NaN = Decimal("NaN")
-
-
-class AltmarketsAPIError(IOError):
-    def __init__(self, error_payload: Dict[str, Any]):
-        super().__init__(str(error_payload))
-        self.error_payload = error_payload
 
 
 cdef class AltmarketsExchangeTransactionTracker(TransactionTracker):
@@ -834,28 +829,32 @@ cdef class AltmarketsExchange(ExchangeBase):
         if tracked_order is None:
             raise ValueError(f"Failed to cancel order - {order_id}. Order no longer tracked.")
         path_url = Constants.ORDER_CANCEL_URI.format(exchange_order_id=tracked_order.exchange_order_id)
+        order_state, errors = None, None
         try:
             response = await self._api_request("post", path_url=path_url, is_auth_required=True)
-
+            if isinstance(response, dict) and "state" in list(response.keys()):
+                order_state = response["state"]
         except (AltmarketsAPIError, Exception) as e:
-            order_state = None
-            if type(e) == AltmarketsAPIError and 'error' in list(e.error_payload.keys()):
-                # TODO AltM - Handle order error cancel msg
-                order_state = e.error_payload.get("error").get("order-state", None)
-            if order_state == 'cancelled':
-                self.c_stop_tracking_order(tracked_order.client_order_id)
-                self.logger().info(f"The order {tracked_order.client_order_id} has been cancelled according"
-                                   f" to order status API. order_state - {order_state}")
-                self.c_trigger_event(self.MARKET_ORDER_CANCELLED_EVENT_TAG,
-                                     OrderCancelledEvent(self._current_timestamp,
-                                                         tracked_order.client_order_id))
-            else:
-                self.logger().network(
-                    f"Failed to cancel order {order_id}: {str(e)}",
-                    exc_info=True,
-                    app_warning_msg=f"Failed to cancel the order {order_id} on Altmarkets. "
-                                    f"Check API key and network connection."
-                )
+            errors = e
+            if isinstance(e, AltmarketsAPIError) and 'error' in list(e.error_payload.keys()):
+                errors = e.error_payload.get("error")
+                order_state = e.error_payload.get("error").get("state", None)
+        if order_state in ['wait', 'cancel', 'done', 'reject']:
+            self.c_stop_tracking_order(tracked_order.client_order_id)
+            self.logger().info(f"The order {tracked_order.client_order_id} has been cancelled according"
+                               f" to order status API.")
+            self.c_trigger_event(self.MARKET_ORDER_CANCELLED_EVENT_TAG,
+                                 OrderCancelledEvent(self._current_timestamp,
+                                                     tracked_order.client_order_id))
+            return CancellationResult(order_id, True)
+        else:
+            self.logger().network(
+                f"Failed to cancel order: {order_id}, state: {order_state}, errors: {str(errors)}",
+                exc_info=True,
+                app_warning_msg=f"Failed to cancel the order {order_id} on Altmarkets. "
+                                f"Check API key and network connection."
+            )
+            return CancellationResult(order_id, False)
 
     cdef c_cancel(self, str trading_pair, str order_id):
         safe_ensure_future(self.execute_cancel(order_id))
@@ -865,15 +864,15 @@ cdef class AltmarketsExchange(ExchangeBase):
         open_orders = [o for o in self._in_flight_orders.values() if o.is_open]
         if len(open_orders) == 0:
             return []
-        cancel_order_ids = [o.client_order_id for o in open_orders]
-        cancellation_results = []
+        tasks = [self.execute_cancel(o.client_order_id) for o in open_orders]
+        order_id_set = set([o.client_order_id for o in open_orders])
+        successful_cancellations = []
         try:
-            for order_id in cancel_order_ids:
-                cancel_order_result = await self.execute_cancel(order_id)
-                cancellation_results.append(CancellationResult(order_id, True))
+            async with timeout(timeout_seconds):
+                cancellation_results = await safe_gather(*tasks, return_exceptions=True)
         except Exception as e:
             self.logger().network(
-                f"Failed to cancel all orders: {cancel_order_ids}",
+                f"Failed to cancel all orders: {order_id_set}",
                 exc_info=True,
                 app_warning_msg=f"Failed to cancel all orders on Altmarkets. Check API key and network connection."
             )

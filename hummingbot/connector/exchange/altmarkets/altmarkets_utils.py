@@ -22,6 +22,12 @@ EXAMPLE_PAIR = "ALTM-BTC"
 DEFAULT_FEES = [0.1, 0.2]
 
 
+class AltmarketsAPIError(IOError):
+    def __init__(self, error_payload: Dict[str, Any]):
+        super().__init__(str(error_payload))
+        self.error_payload = error_payload
+
+
 def split_trading_pair(trading_pair: str) -> Optional[Tuple[str, str]]:
     try:
         m = TRADING_PAIR_SPLITTER.match(trading_pair)
@@ -55,10 +61,6 @@ async def generic_api_request(method,
                               params: Optional[Dict[str, Any]] = None,
                               client=None,
                               try_count: int = 0) -> Dict[str, Any]:
-    class AltmarketsAPIError(IOError):
-        def __init__(self, error_payload: Dict[str, Any]):
-            super().__init__(str(error_payload))
-            self.error_payload = error_payload
     url = f"{Constants.EXCHANGE_ROOT_API}{path_url}"
     headers = {"Content-Type": ("application/json" if method == "post"
                                 else "application/x-www-form-urlencoded")}
