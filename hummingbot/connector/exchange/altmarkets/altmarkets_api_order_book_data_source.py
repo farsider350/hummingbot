@@ -6,6 +6,7 @@ import json
 import logging
 import pandas as pd
 import time
+from decimal import Decimal
 from typing import (
     Any,
     AsyncIterable,
@@ -42,13 +43,19 @@ class AltmarketsAPIOrderBookDataSource(OrderBookTrackerDataSource):
         super().__init__(trading_pairs)
 
     @classmethod
-    async def get_last_traded_prices(cls, trading_pairs: List[str]) -> Dict[str, float]:
+    async def get_last_traded_prices(cls, trading_pairs: List[str]) -> Dict[str, Decimal]:
         results = dict()
         # Altmarkets rate limit is 100 https requests per 10 seconds
-        resp_json = await generic_api_request("get", Constants.TICKER_URI)
-        for trading_pair in trading_pairs:
-            resp_record = [resp_json[symbol] for symbol in list(resp_json.keys()) if symbol == convert_to_exchange_trading_pair(trading_pair)][0]['ticker']
-            results[trading_pair] = float(resp_record["last"])
+        if len(trading_pairs) == 1:
+            for trading_pair in trading_pairs:
+                ex_pair = convert_to_exchange_trading_pair(trading_pair)
+                resp_json = await generic_api_request("get", Constants.TICKER_SINGLE_URI.format(trading_pair=ex_pair))
+                results[trading_pair] = Decimal(str(resp_json['ticker']["last"]))
+        else:
+            resp_json = await generic_api_request("get", Constants.TICKER_URI)
+            for trading_pair in trading_pairs:
+                ex_pair = convert_to_exchange_trading_pair(trading_pair)
+                results[trading_pair] = Decimal(str(resp_json[ex_pair]["ticker"]["last"]))
         return results
 
     # Deprecated get_mid_price function - mid price is pulled from order book now.
