@@ -86,6 +86,8 @@ async def generic_api_request(method,
                 http_status = response.status
     except Exception:
         request_errors = True
+    if client is None:
+        await http_client.close()
     if request_errors or parsed_response is None:
         if try_count < 4:
             try_count += 1
