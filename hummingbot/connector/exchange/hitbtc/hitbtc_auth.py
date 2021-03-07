@@ -14,7 +14,7 @@ class HitbtcAuth():
         self.api_key = api_key
         self.secret_key = secret_key
 
-    def generate_auth(
+    def generate_payload(
         self,
         method: str,
         url: str,
@@ -22,40 +22,39 @@ class HitbtcAuth():
         data: str = None,
     ):
         """
-        Generates authentication signature and return it with the nonce used
-        :return: a tuple of the nonce used and the request signature
+        Generates authentication payload and returns it.
+        :return: A base64 encoded payload for the authentication header.
         """
+        # Nonce is standard EPOCH timestamp only accurate to 1s
         nonce = str(int(time.time()))
-        full_url = f"{url}"
         body = ""
-        if params is not None and len(params) > 0 and method.upper() == "GET":
+        if method == "GET" and params is not None and len(params) > 0:
+            # Need to build the full URL with query string for HS256 sig
             query_string = "&".join([f"{k}={v}" for k, v in params.items()])
-            full_url = f"{url}?{query_string}"
-        elif data is not None and len(data) > 0 and method.upper() == "POST":
+            url = f"{url}?{query_string}"
+        elif method == "POST" and data is not None and len(data) > 0:
             body = data
-        payload = f"{method.upper()}{nonce}{full_url}{body}"
-
-        sig = hmac.new(
-            self.secret_key.encode(),
-            payload.encode(),
-            hashlib.sha256
-        ).hexdigest()
-
-        return (nonce, sig)
+        # Concat payload
+        payload = f"{method}{nonce}{url}{body}"
+        # Create HS256 sig
+        sig = hmac.new(self.secret_key.encode(), payload.encode(), hashlib.sha256).hexdigest()
+        # Base64 encode it with public key and nonce
+        return b64encode(f"{self.api_key}:{nonce}:{sig}".encode()).decode().strip()
 
     def generate_auth_dict_ws(self,
                               nonce: int):
-        data = {
+        """
+        Generates an authentication params for HitBTC websockets login
+        :return: a dictionary of auth params
+        """
+        return {
             "algo": "HS256",
             "pKey": self.api_key,
             "nonce": nonce,
+            "signature": hmac.new(self.secret_key.encode('utf-8'),
+                                  str(nonce).encode('utf-8'),
+                                  hashlib.sha256).hexdigest()
         }
-        data['signature'] = hmac.new(
-            self.secret_key.encode('utf-8'),
-            str(nonce).encode('utf-8'),
-            hashlib.sha256
-        ).hexdigest()
-        return data
 
     def get_headers(self,
                     method,
@@ -66,11 +65,10 @@ class HitbtcAuth():
         Generates authentication headers required by HitBTC
         :return: a dictionary of auth headers
         """
-        nonce, sig = self.generate_auth(method, url, params, data)
-        payload = b64encode(f"{self.api_key}:{nonce}:{sig}".encode()).decode().strip()
+        payload = self.generate_payload(method, url, params, data)
         headers = {
             "Authorization": f"HS256 {payload}"
         }
-        if params is not None and len(params) > 0:
+        if data is not None and len(data) > 0:
             headers["Content-Type"] = "application/json"
         return headers

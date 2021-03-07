@@ -110,20 +110,10 @@ def retry_sleep_time(try_count: int) -> float:
     return float(2 + float(randSleep * (1 + (try_count ** try_count))))
 
 
-async def generic_api_request(method,
-                              endpoint,
-                              params: Optional[Dict[str, Any]] = None,
-                              shared_client=None,
-                              try_count: int = 0) -> Dict[str, Any]:
-    url = f"{Constants.REST_URL}/{endpoint}"
-    headers = {"Content-Type": "application/json"}
-    http_client = shared_client if shared_client is not None else aiohttp.ClientSession()
-    # Build request coro
-    response_coro = http_client.request(method=method.upper(), url=url, headers=headers,
-                                        params=params, timeout=Constants.API_CALL_TIMEOUT)
+async def aiohttp_response_with_errors(request_coroutine):
     http_status, parsed_response, request_errors = None, None, False
     try:
-        async with response_coro as response:
+        async with request_coroutine as response:
             http_status = response.status
             try:
                 parsed_response = await response.json()
@@ -138,9 +128,25 @@ async def generic_api_request(method,
             TempFailure = (parsed_response is None or
                            (response.status not in [200, 201] and "error" not in parsed_response))
             if TempFailure:
+                parsed_response = response.reason if parsed_response is None else parsed_response
                 request_errors = True
     except Exception:
         request_errors = True
+    return http_status, parsed_response, request_errors
+
+
+async def api_call_with_retries(method,
+                                endpoint,
+                                params: Optional[Dict[str, Any]] = None,
+                                shared_client=None,
+                                try_count: int = 0) -> Dict[str, Any]:
+    url = f"{Constants.REST_URL}/{endpoint}"
+    headers = {"Content-Type": "application/json"}
+    http_client = shared_client if shared_client is not None else aiohttp.ClientSession()
+    # Build request coro
+    response_coro = http_client.request(method=method.upper(), url=url, headers=headers,
+                                        params=params, timeout=Constants.API_CALL_TIMEOUT)
+    http_status, parsed_response, request_errors = await aiohttp_response_with_errors(response_coro)
     if shared_client is None:
         await http_client.close()
     if request_errors or parsed_response is None:
@@ -150,8 +156,8 @@ async def generic_api_request(method,
             print(f"Error fetching data from {url}. HTTP status is {http_status}. "
                   f"Retrying in {time_sleep:.0f}s.")
             await asyncio.sleep(time_sleep)
-            return await generic_api_request(method=method, endpoint=endpoint, params=params,
-                                             shared_client=shared_client, try_count=try_count)
+            return await api_call_with_retries(method=method, endpoint=endpoint, params=params,
+                                               shared_client=shared_client, try_count=try_count)
         else:
             raise HitbtcAPIError({"error": parsed_response, "status": http_status})
     return parsed_response
