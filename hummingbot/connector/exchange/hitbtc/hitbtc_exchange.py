@@ -11,6 +11,7 @@ import asyncio
 import aiohttp
 import math
 import time
+import ujson
 from async_timeout import timeout
 
 from hummingbot.core.network_iterator import NetworkStatus
@@ -313,13 +314,17 @@ class HitbtcExchange(ExchangeBase):
         """
         url = f"{Constants.REST_URL}/{endpoint}"
         shared_client = await self._http_client()
+        # Turn `params` into either GET params or POST body data
+        qs_params: dict = params if method.upper() == "GET" else None
+        req_data: str = ujson.dumps(params) if (method.upper() == "POST" and params is not None) else None
+        # Generate auth headers if needed.
+        headers: dict = {"Content-Type": "application/json"}
         if is_auth_required:
-            headers = self._hitbtc_auth.get_headers(method, f"{Constants.REST_URL_AUTH}/{endpoint}", params)
-        else:
-            headers = {"Content-Type": "application/json"}
-        response_coro = shared_client.request(
-            method=method.upper(), url=url, headers=headers, params=params, timeout=Constants.API_CALL_TIMEOUT
-        )
+            headers: dict = self._hitbtc_auth.get_headers(method, f"{Constants.REST_URL_AUTH}/{endpoint}",
+                                                          qs_params, req_data)
+        # Build request coro
+        response_coro = shared_client.request(method=method.upper(), url=url, headers=headers,
+                                              params=qs_params, data=req_data, timeout=Constants.API_CALL_TIMEOUT)
         http_status, parsed_response, request_errors = None, None, False
         try:
             async with response_coro as response:
@@ -334,12 +339,14 @@ class HitbtcExchange(ExchangeBase):
                             parsed_response = f"{parsed_response[:100]} ... (truncated)"
                     except Exception:
                         pass
-                if response.status not in [200, 201] or parsed_response is None:
+                TempFailure = (parsed_response is None or
+                               (response.status not in [200, 201] and "error" not in parsed_response))
+                if TempFailure:
                     request_errors = True
         except Exception:
             request_errors = True
         if request_errors or parsed_response is None:
-            if try_count < 4:
+            if try_count < Constants.API_MAX_RETRIES:
                 try_count += 1
                 time_sleep = retry_sleep_time(try_count)
                 self.logger().info(f"Error fetching data from {url}. HTTP status is {http_status}. "
@@ -348,8 +355,6 @@ class HitbtcExchange(ExchangeBase):
                 return await self._api_request(method=method, endpoint=endpoint, params=params,
                                                is_auth_required=is_auth_required, try_count=try_count)
             else:
-                self.logger().network(f"Error fetching data from {url}. HTTP status is {http_status}. "
-                                      f"Final msg: {parsed_response}.")
                 raise HitbtcAPIError({"error": parsed_response, "status": http_status})
         if "error" in parsed_response:
             raise HitbtcAPIError(parsed_response)
@@ -514,7 +519,7 @@ class HitbtcExchange(ExchangeBase):
         """
         Executes order cancellation process by first calling cancel-order API. The API result doesn't confirm whether
         the cancellation is successful, it simply states it receives the request.
-        :param trading_pair: The market trading pair
+        :param trading_pair: The market trading pair (Unused during cancel on HitBTC)
         :param order_id: The internal order id
         order.last_state to change to CANCELED
         """
@@ -740,7 +745,7 @@ class HitbtcExchange(ExchangeBase):
         open_orders = [o for o in self._in_flight_orders.values() if not o.is_done]
         if len(open_orders) == 0:
             return []
-        tasks = [self._execute_cancel(o.client_order_id) for o in open_orders]
+        tasks = [self._execute_cancel(o.trading_pair, o.client_order_id) for o in open_orders]
         cancellation_results = []
         try:
             async with timeout(timeout_seconds):

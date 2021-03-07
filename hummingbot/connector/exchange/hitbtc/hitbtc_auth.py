@@ -1,7 +1,6 @@
 import hmac
 import hashlib
 import time
-import ujson
 from base64 import b64encode
 from typing import Dict, Any
 
@@ -19,7 +18,8 @@ class HitbtcAuth():
         self,
         method: str,
         url: str,
-        params: Dict[str, Any] = None
+        params: Dict[str, Any] = None,
+        data: str = None,
     ):
         """
         Generates authentication signature and return it with the nonce used
@@ -31,8 +31,8 @@ class HitbtcAuth():
         if params is not None and len(params) > 0 and method.upper() == "GET":
             query_string = "&".join([f"{k}={v}" for k, v in params.items()])
             full_url = f"{url}?{query_string}"
-        elif params is not None and len(params) > 0 and method.upper() == "POST":
-            body = ujson.dumps(params)
+        elif data is not None and len(data) > 0 and method.upper() == "POST":
+            body = data
         payload = f"{method.upper()}{nonce}{full_url}{body}"
 
         sig = hmac.new(
@@ -60,12 +60,13 @@ class HitbtcAuth():
     def get_headers(self,
                     method,
                     url,
-                    params) -> Dict[str, Any]:
+                    params,
+                    data) -> Dict[str, Any]:
         """
         Generates authentication headers required by HitBTC
         :return: a dictionary of auth headers
         """
-        nonce, sig = self.generate_auth(method, url, params)
+        nonce, sig = self.generate_auth(method, url, params, data)
         payload = b64encode(f"{self.api_key}:{nonce}:{sig}".encode()).decode().strip()
         headers = {
             "Authorization": f"HS256 {payload}"

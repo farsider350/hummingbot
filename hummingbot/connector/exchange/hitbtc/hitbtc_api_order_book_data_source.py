@@ -56,7 +56,8 @@ class HitbtcAPIOrderBookDataSource(OrderBookTrackerDataSource):
     async def fetch_trading_pairs() -> List[str]:
         try:
             symbols: List[Dict[str, Any]] = await generic_api_request("get", Constants.ENDPOINT["SYMBOL"])
-            return [convert_from_exchange_trading_pair(sym["id"]) for sym in symbols]
+            trading_pairs = list([convert_from_exchange_trading_pair(sym["id"]) for sym in symbols])
+            return [sym for sym in trading_pairs if sym is not None]
         except Exception:
             # Do nothing if the request fails -- there will be no autocomplete for huobi trading pairs
             pass

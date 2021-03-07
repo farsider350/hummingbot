@@ -1,6 +1,6 @@
 # A single source of truth for constant variables related to the exchange
 class Constants:
-    EXCHANGE_NAME = "HitBTC"
+    EXCHANGE_NAME = "hitbtc"
     REST_URL = "https://api.hitbtc.com/api/2"
     REST_URL_AUTH = "/api/2"
     # WS_PRIVATE_URL = "wss://stream.crypto.com/v2/user"
@@ -31,8 +31,8 @@ class Constants:
     }
 
     WS_METHODS = {
-        "ORDER_SNAPSHOT": "snapshotOrderbook",
-        "ORDER_UPDATE": "updateOrderbook",
+        "ORDERS_SNAPSHOT": "snapshotOrderbook",
+        "ORDERS_UPDATE": "updateOrderbook",
         "TRADES_SNAPSHOT": "snapshotTrades",
         "TRADES_UPDATE": "updateTrades",
         "USER_ORDERS": "activeOrders",
@@ -84,6 +84,7 @@ class Constants:
     MESSAGE_TIMEOUT = 30.0
     PING_TIMEOUT = 10.0
     API_CALL_TIMEOUT = 10.0
+    API_MAX_RETRIES = 4
 
     # Intervals
     # Only used when nothing is received from WS
@@ -92,6 +93,8 @@ class Constants:
     LONG_POLL_INTERVAL = 20.0
     # One minute should be fine for order status since we get these via WS
     UPDATE_ORDER_STATUS_INTERVAL = 60.0
+    # 10 minute interval to update trading rules, these would likely never change whilst running.
+    INTERVAL_TRADING_RULES = 600
 
     # Trading pair splitter regex
-    TRADING_PAIR_SPLITTER = r"^(\w+)(BTC|BCH|DAI|DDRST|EOSDT|EOS|ETH|EURS|IDRT|PAX|BUSD|GUSD|TUSD|USDC|USD)$"
+    TRADING_PAIR_SPLITTER = r"^(\w+)(BTC|BCH|DAI|DDRST|EOSDT|EOS|ETH|EURS|IDRT|PAX|BUSD|GUSD|TUSD|USDC|USDT|USD)$"
