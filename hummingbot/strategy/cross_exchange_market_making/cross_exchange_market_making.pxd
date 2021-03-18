@@ -33,6 +33,12 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
         OrderIDMarketPairTracker _market_pair_tracker
         object _taker_to_maker_base_conversion_rate
         object _taker_to_maker_quote_conversion_rate
+        object _base_asset_price_delegate
+        object _quote_asset_price_delegate
+        object _base_price_source_type
+        object _quote_price_source_type
+        bint _base_price_source_inversed
+        bint _quote_price_source_inversed
         bint _hb_app_notification
         list _maker_order_ids
 

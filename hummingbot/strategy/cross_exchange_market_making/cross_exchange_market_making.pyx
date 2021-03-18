@@ -3,6 +3,7 @@ from collections import (
     deque
 )
 from decimal import Decimal
+import pandas as pd
 import logging
 from math import (
     floor,
@@ -21,13 +22,20 @@ from hummingbot.core.data_type.limit_order import LimitOrder
 from hummingbot.core.network_iterator import NetworkStatus
 from hummingbot.connector.exchange_base import ExchangeBase
 from hummingbot.connector.exchange_base cimport ExchangeBase
-from hummingbot.core.event.events import OrderType
+from hummingbot.core.event.events import (
+    OrderType,
+    PriceType,
+)
 
 from hummingbot.core.data_type.order_book import OrderBook
 from hummingbot.strategy.strategy_base cimport StrategyBase
 from hummingbot.strategy.strategy_base import StrategyBase
+from hummingbot.strategy.market_trading_pair_tuple import MarketTradingPairTuple
 from .cross_exchange_market_pair import CrossExchangeMarketPair
 from .order_id_market_pair_tracker import OrderIDMarketPairTracker
+from .asset_price_delegate cimport AssetPriceDelegate
+from .asset_price_delegate import AssetPriceDelegate
+from .order_book_asset_price_delegate cimport OrderBookAssetPriceDelegate
 
 NaN = float("nan")
 s_decimal_zero = Decimal(0)
@@ -75,6 +83,12 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
                  status_report_interval: float = 900,
                  taker_to_maker_base_conversion_rate: Decimal = Decimal("1"),
                  taker_to_maker_quote_conversion_rate: Decimal = Decimal("1"),
+                 base_asset_price_delegate: AssetPriceDelegate = None,
+                 quote_asset_price_delegate: AssetPriceDelegate = None,
+                 base_price_source_type: str = "mid_price",
+                 quote_price_source_type: str = "mid_price",
+                 base_price_source_inversed: bool = False,
+                 quote_price_source_inversed: bool = False,
                  hb_app_notification: bool = False
                  ):
         """
@@ -134,6 +148,12 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
         self._adjust_orders_enabled = adjust_order_enabled
         self._taker_to_maker_base_conversion_rate = taker_to_maker_base_conversion_rate
         self._taker_to_maker_quote_conversion_rate = taker_to_maker_quote_conversion_rate
+        self._base_asset_price_delegate = base_asset_price_delegate
+        self._quote_asset_price_delegate = quote_asset_price_delegate
+        self._base_price_source_type = self.get_price_type(base_price_source_type)
+        self._quote_price_source_type = self.get_price_type(quote_price_source_type)
+        self._base_price_source_inversed = base_price_source_inversed
+        self._quote_price_source_inversed = quote_price_source_inversed
         self._hb_app_notification = hb_app_notification
 
         self._maker_order_ids = []
@@ -166,6 +186,59 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
     @logging_options.setter
     def logging_options(self, int64_t logging_options):
         self._logging_options = logging_options
+
+    def t_to_m_base_price(self) -> float:
+        if self._base_asset_price_delegate is not None:
+            price_provider = self._base_asset_price_delegate
+        else:
+            return self._taker_to_maker_base_conversion_rate
+        price = price_provider.get_price_by_type(self._base_price_source_type)
+        if price.is_nan():
+            price = price_provider.get_price_by_type(PriceType.MidPrice)
+        if self._base_price_source_inversed is True and not price.is_nan():
+            return Decimal("1") / price
+        return price
+
+    def t_to_m_quote_price(self) -> float:
+        if self._quote_asset_price_delegate is not None:
+            price_provider = self._quote_asset_price_delegate
+        else:
+            return self._taker_to_maker_quote_conversion_rate
+        price = price_provider.get_price_by_type(self._quote_price_source_type)
+        if price.is_nan():
+            price = price_provider.get_price_by_type(PriceType.MidPrice)
+        if self._quote_price_source_inversed is True and not price.is_nan():
+            return Decimal("1") / price
+        return price
+
+    def market_status_data_frame(self, market_trading_pair_tuples: List[MarketTradingPairTuple]) -> pd.DataFrame:
+        markets_data = []
+        markets_columns = ["Exchange", "Market", "Best Bid Price", "Best Ask Price", "Mid Price"]
+        if self._base_asset_price_delegate is not None:
+            base_tuple = MarketTradingPairTuple(self._base_asset_price_delegate.market,
+                                                self._base_asset_price_delegate.trading_pair,
+                                                None,
+                                                None)
+            market_trading_pair_tuples.append(base_tuple)
+        if self._quote_asset_price_delegate is not None:
+            quote_tuple = MarketTradingPairTuple(self._quote_asset_price_delegate.market,
+                                                 self._quote_asset_price_delegate.trading_pair,
+                                                 None,
+                                                 None)
+            market_trading_pair_tuples.append(quote_tuple)
+        for market_trading_pair_tuple in market_trading_pair_tuples:
+            market, trading_pair, base_asset, quote_asset = market_trading_pair_tuple
+            bid_price = market.get_price(trading_pair, False)
+            ask_price = market.get_price(trading_pair, True)
+            mid_price = (bid_price + ask_price)/2
+            markets_data.append([
+                market.display_name,
+                trading_pair,
+                float(bid_price),
+                float(ask_price),
+                float(mid_price)
+            ])
+        return pd.DataFrame(data=markets_data, columns=markets_columns)
 
     def format_status(self) -> str:
         cdef:
@@ -271,6 +344,10 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
 
             if not self._all_markets_ready:
                 self._all_markets_ready = all([market.ready for market in self._sb_markets])
+                if self._base_asset_price_delegate is not None and self._all_markets_ready:
+                    self._all_markets_ready = self._base_asset_price_delegate.ready
+                if self._quote_asset_price_delegate is not None and self._all_markets_ready:
+                    self._all_markets_ready = self._quote_asset_price_delegate.ready
                 if not self._all_markets_ready:
                     # Markets not ready yet. Don't do anything.
                     if should_report_warnings:
@@ -1070,11 +1147,15 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
             object order_price = active_order.price
             ExchangeBase maker_market = market_pair.maker.market
             ExchangeBase taker_market = market_pair.taker.market
+            object base_conv = self.t_to_m_base_price()
+            object quote_conv = self.t_to_m_quote_price()
 
-            object quote_asset_amount = maker_market.c_get_balance(market_pair.maker.quote_asset) if is_buy else \
-                taker_market.c_get_balance(market_pair.taker.quote_asset)
-            object base_asset_amount = taker_market.c_get_balance(market_pair.taker.base_asset) if is_buy else \
-                maker_market.c_get_balance(market_pair.maker.base_asset)
+            object quote_asset_amount = (maker_market.c_get_balance(market_pair.maker.quote_asset)
+                                         if is_buy else
+                                         taker_market.c_get_balance(market_pair.taker.quote_asset) * quote_conv)
+            object base_asset_amount = (taker_market.c_get_balance(market_pair.taker.base_asset) * base_conv
+                                        if is_buy else
+                                        maker_market.c_get_balance(market_pair.maker.base_asset))
             object order_size_limit
 
         order_size_limit = min(base_asset_amount, quote_asset_amount / order_price)
@@ -1096,7 +1177,9 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
         """
         Return price conversion rate for a taker market (to convert it into maker base asset value)
         """
-        return self._taker_to_maker_quote_conversion_rate / self._taker_to_maker_base_conversion_rate
+        base_conversion_rate = self.t_to_m_base_price()
+        quote_conversion_rate = self.t_to_m_quote_price()
+        return quote_conversion_rate / base_conversion_rate
 
     cdef c_check_and_create_new_orders(self, object market_pair, bint has_active_bid, bint has_active_ask):
         """
@@ -1126,15 +1209,15 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
                         True,
                         bid_size
                     )
-                    effective_hedging_price_adjusted = effective_hedging_price * self.market_conversion_rate()
+                    effective_hedging_price_adjusted = effective_hedging_price / self.market_conversion_rate()
                     if self._logging_options & self.OPTION_LOG_CREATE_ORDER:
                         self.log_with_clock(
                             logging.INFO,
                             f"({market_pair.maker.trading_pair}) Creating limit bid order for "
                             f"{bid_size} {market_pair.maker.base_asset} at "
                             f"{bid_price} {market_pair.maker.quote_asset}. "
-                            f"Current hedging price: {effective_hedging_price} {market_pair.taker.quote_asset} "
-                            f"(Rate adjusted: {effective_hedging_price_adjusted:.2f} {market_pair.taker.quote_asset})."
+                            f"Current hedging price: {effective_hedging_price:.8f} {market_pair.maker.quote_asset} "
+                            f"(Rate adjusted: {effective_hedging_price_adjusted:.8f} {market_pair.taker.quote_asset})."
                         )
                     order_id = self.c_place_order(market_pair, True, True, bid_size, bid_price)
                 else:
@@ -1165,15 +1248,15 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
                         False,
                         ask_size
                     )
-                    effective_hedging_price_adjusted = effective_hedging_price
+                    effective_hedging_price_adjusted = effective_hedging_price / self.market_conversion_rate()
                     if self._logging_options & self.OPTION_LOG_CREATE_ORDER:
                         self.log_with_clock(
                             logging.INFO,
                             f"({market_pair.maker.trading_pair}) Creating limit ask order for "
                             f"{ask_size} {market_pair.maker.base_asset} at "
                             f"{ask_price} {market_pair.maker.quote_asset}. "
-                            f"Current hedging price: {effective_hedging_price} {market_pair.maker.quote_asset} "
-                            f"(Rate adjusted: {effective_hedging_price_adjusted:.2f} {market_pair.maker.quote_asset})."
+                            f"Current hedging price: {effective_hedging_price:.8f} {market_pair.maker.quote_asset} "
+                            f"(Rate adjusted: {effective_hedging_price_adjusted:.8f} {market_pair.taker.quote_asset})."
                         )
                     order_id = self.c_place_order(market_pair, False, True, ask_size, ask_price)
                 else:
@@ -1225,6 +1308,18 @@ cdef class CrossExchangeMarketMakingStrategy(StrategyBase):
     cdef c_cancel_order(self, object market_pair, str order_id):
         market_trading_pair_tuple = self._sb_order_tracker.c_get_market_pair_from_order_id(order_id)
         StrategyBase.c_cancel_order(self, market_trading_pair_tuple, order_id)
+
+    def get_price_type(self, price_type_str: str) -> PriceType:
+        if price_type_str == "mid_price":
+            return PriceType.MidPrice
+        elif price_type_str == "best_bid":
+            return PriceType.BestBid
+        elif price_type_str == "best_ask":
+            return PriceType.BestAsk
+        elif price_type_str == "last_price":
+            return PriceType.LastTrade
+        else:
+            raise ValueError(f"Unrecognized price type string {price_type_str}.")
     # ----------------------------------------------------------------------------------------------------------
     # </editor-fold>
 
