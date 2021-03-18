@@ -104,6 +104,10 @@ okex_passphrase = os.getenv("OKEX_PASSPHRASE")
 crypto_com_api_key = os.getenv("CRYPTO_COM_API_KEY")
 crypto_com_secret_key = os.getenv("CRYPTO_COM_SECRET_KEY")
 
+# AltMarkets.io Test
+altmarkets_api_key = os.getenv("ALTMARKETS_API_KEY")
+altmarkets_secret_key = os.getenv("ALTMARKETS_SECRET_KEY")
+
 # Wallet Tests
 test_erc20_token_address = os.getenv("TEST_ERC20_TOKEN_ADDRESS")
 web3_test_private_key_a = os.getenv("TEST_WALLET_PRIVATE_KEY_A")

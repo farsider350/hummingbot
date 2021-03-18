@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 connector_status = {
+    'altmarkets': 'green',
     'balancer': 'green',
     'beaxy': 'yellow',
     'binance': 'green',
