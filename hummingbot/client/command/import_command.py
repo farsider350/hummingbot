@@ -43,6 +43,7 @@ class ImportCommand:
         self.app.change_prompt(prompt=">>> ")
         if await self.status_check_all():
             self._notify("\nEnter \"start\" to start market making.")
+            self.app.set_text("start")
 
     async def prompt_a_file_name(self  # type: HummingbotApplication
                                  ):
