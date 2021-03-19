@@ -413,7 +413,7 @@ async def minimum_order_amount(exchange: str, trading_pair: str) -> Decimal:
         mid_price = await get_last_price(exchange, trading_pair)
         if mid_price is not None:
             quote_amount = default_amount / mid_price
-    return round(quote_amount, 5)
+    return round(quote_amount, 4)
 
 
 def default_strategy_file_path(strategy: str) -> str:
