@@ -63,7 +63,7 @@ docker run -d \
   --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_scripts,destination=/scripts/" \
   --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_certs,destination=/certs/" \
   -e STRATEGY -e CONFIG_FILE_NAME -e CONFIG_PASSWORD \
-  coinalpha/hummingbot:latest
+  theholiestroger/hummingbot:latest
 
 # 6) Clean up
 unset STRATEGY CONFIG_FILE_NAME CONFIG_PASSWORD

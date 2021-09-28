@@ -13,7 +13,7 @@ Hummingbot is built and maintained by CoinAlpha, a company that runs business th
 
 ## More resources
 
-- [Hummingbot Github](https://github.com/coinalpha/hummingbot): The official Hummingbot Github repository
+- [Hummingbot Github](https://github.com/TheHolyRoger/hummingbot): The official Hummingbot Github repository
 - [Hummingbot Youtube](https://www.youtube.com/channel/UCxzzdEnDRbylLMWmaMjywOA): The official Hummingbot Youtube Channel
 - [Hummingbot Academy](https://hummingbot.io/academy): Educational resources about Hummingbot
 - [中文 wiki](https://github.com/coinalpha/hummingbot_chinese): General information about Hummingbot, translated into Mandarin Chinese

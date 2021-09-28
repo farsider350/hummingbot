@@ -23,7 +23,7 @@ list_instances () {
  echo
  echo "List of all docker containers using the \"$TAG\" version:"
  echo
- docker ps -a --filter ancestor=coinalpha/hummingbot:$TAG
+ docker ps -a --filter ancestor=theholiestroger/hummingbot:$TAG
  echo
  echo "⚠️  WARNING: This will attempt to update all instances. Any containers not in Exited () STATUS will cause the update to fail."
  echo
@@ -96,7 +96,7 @@ execute_docker () {
  docker rm ${INSTANCES[@]}
  echo
  # 2) Delete old image
- docker image rm coinalpha/hummingbot:$TAG
+ docker image rm theholiestroger/hummingbot:$TAG
  # 3) Re-create instances with the most recent hummingbot version
  echo "Re-creating docker containers with updated image ..."
  j="0"
@@ -110,7 +110,7 @@ execute_docker () {
    --mount "type=bind,source=${FOLDERS[$j]}/hummingbot_data,destination=/data/" \
    --mount "type=bind,source=${FOLDERS[$j]}/hummingbot_scripts,destination=/scripts/" \
    --mount "type=bind,source=${FOLDERS[$j]}/hummingbot_certs,destination=/certs/" \
-   coinalpha/hummingbot:$TAG
+   theholiestroger/hummingbot:$TAG
    j=$[$j+1]
  done
  echo
@@ -128,7 +128,7 @@ if [ "$CONTINUE" == "Y" ]
 then
  # Store instance names in an array
  declare -a INSTANCES
- INSTANCES=( $(docker ps -a --filter ancestor=coinalpha/hummingbot:$TAG --format "{{.Names}}") )
+ INSTANCES=( $(docker ps -a --filter ancestor=theholiestroger/hummingbot:$TAG --format "{{.Names}}") )
  list_dir
  declare -a FOLDERS
  prompt_folder

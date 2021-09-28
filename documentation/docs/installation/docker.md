@@ -1,6 +1,6 @@
 # Install Hummingbot with Docker
 
-CoinAlpha publishes [Docker images](https://hub.docker.com/r/coinalpha/hummingbot) for the `latest` and `development` builds of Hummingbot, as well as every version. 
+CoinAlpha publishes [Docker images](https://hub.docker.com/r/theholiestroger/hummingbot) for the `latest` and `development` builds of Hummingbot, as well as every version. 
 
 You can install Docker and Hummingbot by selecting the following options below:
 
@@ -17,7 +17,7 @@ _Supported versions: 16.04 LTS, 18.04 LTS, 19.04_
 
     ```bash
     # 1) Download Docker install script
-    wget https://raw.githubusercontent.com/CoinAlpha/hummingbot/master/installation/install-docker/install-docker-ubuntu.sh
+    wget https://raw.githubusercontent.com/TheHolyRoger/hummingbot/master/installation/install-docker/install-docker-ubuntu.sh
 
     # 2) Enable script permissions
     chmod a+x install-docker-ubuntu.sh
@@ -58,9 +58,9 @@ _Supported versions: 16.04 LTS, 18.04 LTS, 19.04_
 
     ```bash
     # 1) Download Hummingbot install, start, and update script
-    wget https://raw.githubusercontent.com/CoinAlpha/hummingbot/master/installation/docker-commands/create.sh
-    wget https://raw.githubusercontent.com/CoinAlpha/hummingbot/master/installation/docker-commands/start.sh
-    wget https://raw.githubusercontent.com/CoinAlpha/hummingbot/master/installation/docker-commands/update.sh
+    wget https://raw.githubusercontent.com/TheHolyRoger/hummingbot/master/installation/docker-commands/create.sh
+    wget https://raw.githubusercontent.com/TheHolyRoger/hummingbot/master/installation/docker-commands/start.sh
+    wget https://raw.githubusercontent.com/TheHolyRoger/hummingbot/master/installation/docker-commands/update.sh
 
     # 2) Enable script permissions
     chmod a+x *.sh
@@ -89,7 +89,7 @@ _Supported versions: 16.04 LTS, 18.04 LTS, 19.04_
     --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_logs,destination=/logs/" \
     --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_data,destination=/data/" \
     --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_scripts,destination=/scripts/" \
-    coinalpha/hummingbot:latest
+    theholiestroger/hummingbot:latest
     ```
 
 ## MacOS
@@ -100,9 +100,9 @@ You can install Docker by [downloading an installer](https://docs.docker.com/doc
 
     ```bash
     # 1) Download Hummingbot install, start, and update script
-    curl https://raw.githubusercontent.com/CoinAlpha/hummingbot/master/installation/docker-commands/create.sh -o create.sh
-    curl https://raw.githubusercontent.com/CoinAlpha/hummingbot/master/installation/docker-commands/start.sh -o start.sh
-    curl https://raw.githubusercontent.com/CoinAlpha/hummingbot/master/installation/docker-commands/update.sh -o update.sh
+    curl https://raw.githubusercontent.com/TheHolyRoger/hummingbot/master/installation/docker-commands/create.sh -o create.sh
+    curl https://raw.githubusercontent.com/TheHolyRoger/hummingbot/master/installation/docker-commands/start.sh -o start.sh
+    curl https://raw.githubusercontent.com/TheHolyRoger/hummingbot/master/installation/docker-commands/update.sh -o update.sh
 
     # 2) Enable script permissions
     chmod a+x *.sh
@@ -131,7 +131,7 @@ You can install Docker by [downloading an installer](https://docs.docker.com/doc
     --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_logs,destination=/logs/" \
     --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_data,destination=/data/" \
     --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_scripts,destination=/scripts/" \
-    coinalpha/hummingbot:latest
+    theholiestroger/hummingbot:latest
     ```
 
 ## Windows

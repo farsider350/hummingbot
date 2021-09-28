@@ -66,7 +66,7 @@ The [Hummingbot YouTube channel](https://www.youtube.com/channel/UCxzzdEnDRbylLM
 
 ### Github
 
-The [Hummingbot Github repository](https://github.com/coinalpha/hummingbot) is a monorepo that contains the codebase for Hummingbot, Hummingbot Gateway, and this documentation.
+The [Hummingbot Github repository](https://github.com/TheHolyRoger/hummingbot) is a monorepo that contains the codebase for Hummingbot, Hummingbot Gateway, and this documentation.
 
 For bugs not yet listed in GitHub, please submit a [Bug Report](https://github.com/CoinAlpha/hummingbot/issues/new?assignees=&labels=bug&template=bug_report.md&title=%5BBUG%5D). **Please follow the template and include detailed descriptions of the bug, steps to reproduction, supporting artifacts such as screenshots, logs, configuration settings, and suggested fixes, if any.**
 

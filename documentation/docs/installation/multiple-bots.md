@@ -13,14 +13,14 @@ Create multiple instances using `./create.sh` script. Then, use the following co
 **Linux**
 
 ```Linux
-wget https://raw.githubusercontent.com/CoinAlpha/hummingbot/development/installation/docker-commands/create.sh
+wget https://raw.githubusercontent.com/TheHolyRoger/hummingbot/development/installation/docker-commands/create.sh
 chmod a+x *.sh
 ```
 
 **MacOS**
 
 ```MacOS
-curl https://raw.githubusercontent.com/CoinAlpha/hummingbot/development/installation/docker-commands/create.sh -o create.sh
+curl https://raw.githubusercontent.com/TheHolyRoger/hummingbot/development/installation/docker-commands/create.sh -o create.sh
 chmod a+x *.sh
 ```
 
@@ -28,7 +28,7 @@ chmod a+x *.sh
 
 ```
 cd ~
-curl https://raw.githubusercontent.com/CoinAlpha/hummingbot/development/installation/docker-commands/create.sh -o create.sh
+curl https://raw.githubusercontent.com/TheHolyRoger/hummingbot/development/installation/docker-commands/create.sh -o create.sh
 chmod a+x *.sh
 ```
 

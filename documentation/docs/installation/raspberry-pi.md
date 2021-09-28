@@ -30,7 +30,7 @@ Exit
 
 **Install Hummingbot**
 
-The Latest ARM version can be found here (filter list by "arm") - https://hub.docker.com/r/coinalpha/hummingbot/tags?page=1&ordering=last_updated&name=arm
+The Latest ARM version can be found here (filter list by "arm") - https://hub.docker.com/r/theholiestroger/hummingbot/tags?page=1&ordering=last_updated&name=arm
 
 You can install Hummingbot with **_either_** of the following options:
 
@@ -41,9 +41,9 @@ You can install Hummingbot with **_either_** of the following options:
 
     ```bash
     # 1) Download Hummingbot install, start, and update script
-    wget https://raw.githubusercontent.com/CoinAlpha/hummingbot/development/installation/docker-commands/create.sh
-    wget https://raw.githubusercontent.com/CoinAlpha/hummingbot/development/installation/docker-commands/start.sh
-    wget https://raw.githubusercontent.com/CoinAlpha/hummingbot/development/installation/docker-commands/update.sh
+    wget https://raw.githubusercontent.com/TheHolyRoger/hummingbot/development/installation/docker-commands/create.sh
+    wget https://raw.githubusercontent.com/TheHolyRoger/hummingbot/development/installation/docker-commands/start.sh
+    wget https://raw.githubusercontent.com/TheHolyRoger/hummingbot/development/installation/docker-commands/update.sh
 
     # 2) Enable script permissions
     chmod a+x *.sh
@@ -76,7 +76,7 @@ You can install Hummingbot with **_either_** of the following options:
     --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_logs,destination=/logs/" \
     --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_data,destination=/data/" \
     --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_scripts,destination=/scripts/" \
-    coinalpha/hummingbot:version-0.42.0-arm_beta
+    theholiestroger/hummingbot:version-0.42.0-arm_beta
     ```
 
 ## Install from source
@@ -156,7 +156,7 @@ This guide would help you build your own Hummingbot ARM image when there is a ne
 
 ```
 # Set a name of your image on insert_name
-docker build -t coinalpha/hummingbot:insert_name -f Dockerfile.arm .
+docker build -t theholiestroger/hummingbot:insert_name -f Dockerfile.arm .
 ```
 
 On this sample, we set `v036` for the name of the image. This is needed when you run `./create.sh` command
