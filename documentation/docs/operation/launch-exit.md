@@ -9,7 +9,7 @@ If you downloaded the helper script before, proceed to step 2.
 1. Download `start.sh` helper script from Github using the command below.
 
 ```Manual
-wget https://raw.githubusercontent.com/CoinAlpha/hummingbot/development/installation/docker-commands/start.sh
+wget https://raw.githubusercontent.com/TheHolyRoger/hummingbot/development/installation/docker-commands/start.sh
 chmod a+x start.sh
 ```
 

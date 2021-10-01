@@ -19,7 +19,7 @@ For example:
 
 Hummingbot is regularly updated each month (see [Release Notes](/release-notes/)) and recommends users to periodically update their installations to get the latest version of the software.
 
-Updating to the latest docker image (e.g. `coinalpha/hummingbot:latest`)
+Updating to the latest docker image (e.g. `theholiestroger/hummingbot:latest`)
 
 !!! note
     Make sure to stop all the containers using the same image first  before running the `./update.sh` script.
@@ -31,7 +31,7 @@ Updating to the latest docker image (e.g. `coinalpha/hummingbot:latest`)
     rm -rf update.sh
 
     # 2) Download update script
-    wget https://raw.githubusercontent.com/CoinAlpha/hummingbot/development/installation/docker-commands/update.sh
+    wget https://raw.githubusercontent.com/TheHolyRoger/hummingbot/development/installation/docker-commands/update.sh
 
     # 3) Enable script permissions
     chmod a+x update.sh
@@ -47,7 +47,7 @@ Updating to the latest docker image (e.g. `coinalpha/hummingbot:latest`)
     docker rm hummingbot-instance
 
     # 2) Delete old hummingbot image
-    docker image rm coinalpha/hummingbot:latest
+    docker image rm theholiestroger/hummingbot:latest
 
     # 3) Re-create instance with latest hummingbot release
     docker run -it \
@@ -56,19 +56,19 @@ Updating to the latest docker image (e.g. `coinalpha/hummingbot:latest`)
     --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_conf,destination=/conf/" \
     --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_logs,destination=/logs/" \
     --mount "type=bind,source=$(pwd)/hummingbot_files/hummingbot_data,destination=/data/" \
-    coinalpha/hummingbot:latest
+    theholiestroger/hummingbot:latest
     ```
 A previous version (i.e. `version-0.30.0`) can be installed when creating a Hummingbot instance.
 
 ## Source
 
-The Hummingbot codebase is hosted at https://github.com/coinalpha/hummingbot.
+The Hummingbot codebase is hosted at https://github.com/TheHolyRoger/hummingbot.
 
 === "Scripts"
 
     ```bash
     # 1) Download update script to the *root* folder
-    wget https://raw.githubusercontent.com/CoinAlpha/hummingbot/development/installation/install-from-source/update.sh
+    wget https://raw.githubusercontent.com/TheHolyRoger/hummingbot/development/installation/install-from-source/update.sh
 
     # 2) Enable script permissions
     chmod a+x update.sh

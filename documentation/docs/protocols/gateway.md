@@ -23,8 +23,8 @@ Hummingbot Gateway is API middleware that allows Hummingbot to connect to decent
 ### Mac
 
 ```Mac
-curl https://raw.githubusercontent.com/CoinAlpha/hummingbot/development/installation/docker-commands/create-gateway.sh -o create-gateway.sh
-curl https://raw.githubusercontent.com/CoinAlpha/hummingbot/development/installation/docker-commands/update-gateway.sh -o update-gateway.sh
+curl https://raw.githubusercontent.com/TheHolyRoger/hummingbot/development/installation/docker-commands/create-gateway.sh -o create-gateway.sh
+curl https://raw.githubusercontent.com/TheHolyRoger/hummingbot/development/installation/docker-commands/update-gateway.sh -o update-gateway.sh
 chmod a+x *.sh
 ./create-gateway.sh
 ```
@@ -32,8 +32,8 @@ chmod a+x *.sh
 ### Linux
 
 ```Linux
-wget https://raw.githubusercontent.com/CoinAlpha/hummingbot/development/installation/docker-commands/create-gateway.sh
-wget https://raw.githubusercontent.com/CoinAlpha/hummingbot/development/installation/docker-commands/update-gateway.sh
+wget https://raw.githubusercontent.com/TheHolyRoger/hummingbot/development/installation/docker-commands/create-gateway.sh
+wget https://raw.githubusercontent.com/TheHolyRoger/hummingbot/development/installation/docker-commands/update-gateway.sh
 chmod a+x *.sh
 ./create-gateway.sh
 ```
